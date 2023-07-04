@@ -103,6 +103,11 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static  final String UPSERT_DOC = "Update a row in case of a duplicate key";
     private static  final String UPSERT_DISPLAY = "Change the behavior to update the row with the same key instead of throwing an error";
 
+    private static final String INSERT_IGNORE= "singlestore.insert.ignore";
+    private static  final String INSERT_IGNORE_DOC = "Ignore insert a row in case of a duplicate key";
+    private static  final String INSERT_IGNORE_DISPLAY = "Change the behavior to insert the row with the same key instead of throwing an error";
+
+
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
@@ -293,7 +298,17 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 4,
                 ConfigDef.Width.MEDIUM,
-                UPSERT_DISPLAY);
+                UPSERT_DISPLAY)
+            .define(INSERT_IGNORE,
+                    ConfigDef.Type.BOOLEAN,
+                    false,
+                    ConfigDef.Importance.LOW,
+                    INSERT_IGNORE_DOC,
+                    SINGLESTORE_GROUP,
+                    4,
+                    ConfigDef.Width.MEDIUM,
+                    INSERT_IGNORE_DISPLAY
+            );
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -314,6 +329,8 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final String recordToTableMappingField;
     public final Map<String, String> recordToTableMap;
     public boolean upsert;
+
+    public boolean insertIgnore;
 
 
     public SingleStoreSinkConfig(Map<String, String> props) {
@@ -337,6 +354,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
         this.recordToTableMap = getRecordToTableMap(props);
         this.upsert = getBoolean(UPSERT);
+        this.insertIgnore=getBoolean(INSERT_IGNORE);
 
         if (!topicToTableMap.isEmpty() && recordToTableMappingField != null) {
             throw new ConfigException("Configurations \"singlestore.recordToTableMappingField\" and \"singlestore.tableName\" are mutually exclusive");

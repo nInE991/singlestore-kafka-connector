@@ -2,6 +2,7 @@ package com.singlestore.kafka.sink;
 
 import com.singlestore.kafka.utils.ColumnMapping;
 import com.singlestore.kafka.utils.ValueWithSchema;
+import org.apache.kafka.common.protocol.types.Field;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.io.IOException;
@@ -18,6 +19,7 @@ public class CsvDbWriter {
     String filter;
     String table;
     boolean upsert;
+    boolean insertIgnore;
 
     public CsvDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table) {
         this.columnMappings = config.tableToColumnToFieldMap.get(table);
@@ -29,22 +31,25 @@ public class CsvDbWriter {
         this.filter = config.filter;
         this.table = table;
         this.upsert = config.upsert;
+        this.insertIgnore = config.insertIgnore;
     }
 
     public String generateQuery(String ext) {
         String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", ext);
         String columnNames = SingleStoreDialect.escapeColumnNames(columns);
-        String queryReplace = upsert ? "REPLACE" : "";
+        String upsertQueryReplace = upsert ? "REPLACE" : "";
+        String ignoreReplace = insertIgnore ? "IGNORE" : upsertQueryReplace;
+
         String queryTable = String.format("INTO TABLE %s (%s)", SingleStoreDialect.quoteIdentifier(table), columnNames);
         String queryFilter = filter == null ? "" : String.format("WHERE %s", filter);
-        return String.join(" ", queryPrefix, queryReplace, queryTable, queryFilter);
+        return String.join(" ", queryPrefix, ignoreReplace, queryTable, queryFilter);
     }
 
     public void writeData(OutputStream outputStream, Collection<SinkRecord> records) throws IOException {
-        for (SinkRecord record: records) {
+        for (SinkRecord record : records) {
             byte[] value = columnMappings != null ?
-                new ValueWithSchema(record).mapColumnsToCSV(columnMappings).getBytes(StandardCharsets.UTF_8) :
-                new ValueWithSchema(record).toCSV(columns).getBytes(StandardCharsets.UTF_8);
+                    new ValueWithSchema(record).mapColumnsToCSV(columnMappings).getBytes(StandardCharsets.UTF_8) :
+                    new ValueWithSchema(record).toCSV(columns).getBytes(StandardCharsets.UTF_8);
             outputStream.write(value);
             outputStream.write('\n');
         }
